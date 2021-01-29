@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import namedtuple
+import logging
 import subprocess
 import sys
 import time
@@ -42,7 +43,8 @@ def get_wg_peers(interface):
                              encoding="ascii",
                              capture_output=True)
     if wgstate.returncode != 0:
-        print("wg call failed: {}".format(wgstate.stderr.strip()))
+        logging.error("%s: call to wireguard failed: %s", interface,
+                      wgstate.stderr.strip())
         return
     # Discard first line, peers start at second line
     raw_peers = wgstate.stdout.split("\n")[1:]
@@ -59,7 +61,8 @@ def get_kernel_routes(interface, ipv6):
                                 encoding="ascii",
                                 capture_output=True)
     if raw_routes.returncode != 0:
-        print("Couldn't get kernel routes: {}".format(raw_routes.stderr.strip()))
+        logging.error("%s: Couldn't get kernel routes: %s", interface,
+                      raw_routes.stderr.strip())
         return
     routes = [route.split()[0] for route in raw_routes.stdout.split("\n") if route != ""]
     # Handle "default" route
@@ -82,22 +85,26 @@ def update_peer_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
         if now - peer.latest_handshake < TIMEOUT:
             for prefix in peer.allowed_ips:
                 if not (prefix in ipv4_routes or prefix in ipv6_routes):
-                    print("Adding new prefix {}".format(prefix))
+                    logging.info("%s: [%s] Adding new prefix %s", interface,
+                                 peer.public_key, prefix)
                     ret = subprocess.run(["ip", "route", "replace", prefix, "dev", interface],
                                          encoding="ascii",
                                          capture_output=True)
                     if ret.returncode != 0:
-                        print("Couldn't add prefix {}: {}".format(prefix, ret.stderr.strip()))
+                        logging.error("%s: Couldn't add prefix %s: %s", interface,
+                                      prefix, ret.stderr.strip())
         # Inactive peer
         else:
             for prefix in peer.allowed_ips:
                 if prefix in ipv4_routes or prefix in ipv6_routes:
-                    print("Removing stale prefix {}".format(prefix))
+                    logging.info("%s: [%s] Removing stale prefix %s", interface,
+                                 peer.public_key, prefix)
                     ret = subprocess.run(["ip", "route", "delete", prefix, "dev", interface],
                                          encoding="ascii",
                                          capture_output=True)
                     if ret.returncode != 0:
-                        print("Couldn't remove prefix {}: {}".format(prefix, ret.stderr.strip()))
+                        logging.error("%s: Couldn't remove prefix %s: %s", interface,
+                                      prefix, ret.stderr.strip())
 
 
 def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
@@ -110,15 +117,18 @@ def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
     # Remove unknown routes
     for prefix in ipv4_routes + ipv6_routes:
         if prefix not in all_allowed_ips:
-            print("Removing unknown prefix {}".format(prefix))
+            logging.info("%s: Removing unknown prefix %s", interface,
+                         prefix)
             ret = subprocess.run(["ip", "route", "delete", prefix, "dev", interface],
                                  encoding="ascii",
                                  capture_output=True)
             if ret.returncode != 0:
-                print("Couldn't remove prefix {}: {}".format(prefix, ret.stderr.strip()))
+                logging.error("%s: Couldn't remove prefix %s: %s",
+                              interface, prefix, ret.stderr.strip())
             
 
 def main_loop(interfaces):
+    logging.info("Starting main loop on interfaces: %s", ", ".join(interfaces))
     while True:
         for interface in interfaces:
             wg_peers = get_wg_peers(interface)
@@ -132,6 +142,9 @@ def main_loop(interfaces):
             remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes)
         time.sleep(INTERVAL)
 
-
 if __name__ == '__main__':
-    main_loop([sys.argv[1]])
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+    try:
+        main_loop([sys.argv[1]])
+    except KeyboardInterrupt:
+        logging.info("Exiting main loop")
