@@ -39,6 +39,9 @@ def get_wg_peers(interface):
     wgstate = subprocess.run(["wg", "show", interface, "dump"],
                              encoding="ascii",
                              capture_output=True)
+    if wgstate.returncode != 0:
+        print("wg call failed: {}".format(wgstate.stderr.strip()))
+        return
     # Discard first line, peers start at second line
     raw_peers = wgstate.stdout.split("\n")[1:]
     peers = [parse_wg_peer(raw_peer.split()) for raw_peer in raw_peers if raw_peer != ""]
@@ -104,6 +107,8 @@ def main_loop(interfaces):
     while True:
         for interface in interfaces:
             wg_peers = get_wg_peers(interface)
+            if wg_peers == None:
+                continue
             ipv4_routes = get_kernel_routes(interface, ipv6=False)
             ipv6_routes = get_kernel_routes(interface, ipv6=True)
             update_peer_routes(interface, wg_peers, ipv4_routes, ipv6_routes)
