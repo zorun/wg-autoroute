@@ -34,6 +34,8 @@ def parse_wg_peer(fields):
 
 def get_wg_peers(interface):
     """Returns the current list of peers of the wireguard interface, as a list of Peer objects.
+
+    In case of failure, returns None.
     """
     # Get wireguard state for interface
     wgstate = subprocess.run(["wg", "show", interface, "dump"],
@@ -49,15 +51,16 @@ def get_wg_peers(interface):
 
 
 def get_kernel_routes(interface, ipv6):
-    """Returns kernel routes for the given interface, as a list of prefixes."""
-    if ipv6:
-        raw_routes = subprocess.run(["ip", "-6", "route", "show", "dev", interface],
-                                    encoding="ascii",
-                                    capture_output=True)
-    else:
-        raw_routes = subprocess.run(["ip", "route", "show", "dev", interface],
-                                    encoding="ascii",
-                                    capture_output=True)
+    """Returns kernel routes for the given interface, as a list of prefixes.
+
+    In case of failure, returns None."""
+    ip = ["ip", "-6"] if ipv6 else ["ip"]
+    raw_routes = subprocess.run(ip + ["route", "show", "dev", interface],
+                                encoding="ascii",
+                                capture_output=True)
+    if raw_routes.returncode != 0:
+        print("Couldn't get kernel routes: {}".format(raw_routes.stderr.strip()))
+        return
     routes = [route.split()[0] for route in raw_routes.stdout.split("\n") if route != ""]
     # Handle "default" route
     default_route = "::/0" if ipv6 else "0.0.0.0/0"
@@ -80,13 +83,21 @@ def update_peer_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
             for prefix in peer.allowed_ips:
                 if not (prefix in ipv4_routes or prefix in ipv6_routes):
                     print("Adding new prefix {}".format(prefix))
-                    subprocess.run(["ip", "route", "replace", prefix, "dev", interface])
+                    ret = subprocess.run(["ip", "route", "replace", prefix, "dev", interface],
+                                         encoding="ascii",
+                                         capture_output=True)
+                    if ret.returncode != 0:
+                        print("Couldn't add prefix {}: {}".format(prefix, ret.stderr.strip()))
         # Inactive peer
         else:
             for prefix in peer.allowed_ips:
                 if prefix in ipv4_routes or prefix in ipv6_routes:
                     print("Removing stale prefix {}".format(prefix))
-                    subprocess.run(["ip", "route", "delete", prefix, "dev", interface])
+                    ret = subprocess.run(["ip", "route", "delete", prefix, "dev", interface],
+                                         encoding="ascii",
+                                         capture_output=True)
+                    if ret.returncode != 0:
+                        print("Couldn't remove prefix {}: {}".format(prefix, ret.stderr.strip()))
 
 
 def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
@@ -100,7 +111,11 @@ def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
     for prefix in ipv4_routes + ipv6_routes:
         if prefix not in all_allowed_ips:
             print("Removing unknown prefix {}".format(prefix))
-            subprocess.run(["ip", "route", "delete", prefix, "dev", interface])
+            ret = subprocess.run(["ip", "route", "delete", prefix, "dev", interface],
+                                 encoding="ascii",
+                                 capture_output=True)
+            if ret.returncode != 0:
+                print("Couldn't remove prefix {}: {}".format(prefix, ret.stderr.strip()))
             
 
 def main_loop(interfaces):
@@ -111,6 +126,8 @@ def main_loop(interfaces):
                 continue
             ipv4_routes = get_kernel_routes(interface, ipv6=False)
             ipv6_routes = get_kernel_routes(interface, ipv6=True)
+            if ipv4_routes == None or ipv6_routes == None:
+                continue
             update_peer_routes(interface, wg_peers, ipv4_routes, ipv6_routes)
             remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes)
         time.sleep(INTERVAL)
