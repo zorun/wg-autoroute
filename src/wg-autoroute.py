@@ -143,7 +143,11 @@ def main_loop(interfaces):
         time.sleep(INTERVAL)
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+    file_logging = logging.FileHandler("/var/log/wg-autoroute.log")
+    stderr_logging = logging.StreamHandler()
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
+                        level=logging.INFO,
+                        handlers=[stderr_logging, file_logging])
     try:
         main_loop([sys.argv[1]])
     except KeyboardInterrupt:
