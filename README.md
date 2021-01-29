@@ -31,3 +31,8 @@ The software will only manage routes that go through the specified interface.
 
 TODO: systemd service
 
+
+## Credits
+
+The idea was first developed in bash at [Illyse](https://www.illyse.net/), member of [FFDN](https://www.ffdn.org/en).
+This is a Python re-implementation.
