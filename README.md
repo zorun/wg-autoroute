@@ -47,6 +47,17 @@ You can also manually start the service with one or more Wireguard interface nam
 
 Of course, it needs to run as root to be able to add and remove kernel routes.
 
+Other options:
+
+    --logfile LOGFILE, -l LOGFILE
+                        Log to the given file in addition to stderr
+    --interval INTERVAL, -I INTERVAL
+                        Amount of seconds to wait between each route check. Default: 5
+    --timeout TIMEOUT, -T TIMEOUT
+                        Amount of seconds after which a peer will be considered inactive
+			(since its last handshake). Don't set this lower than about 3 minutes.
+			Default: 200
+
 
 ## Credits
 
