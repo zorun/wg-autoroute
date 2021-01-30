@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
+import argparse
 from collections import namedtuple
 import logging
 import subprocess
-import sys
 import time
 
-
-INTERVAL=5
-TIMEOUT=200
 
 Peer = namedtuple("Peer", [
     "public_key",           # String
@@ -76,13 +73,13 @@ def get_kernel_routes(interface, ipv6):
     return list(routes)
 
 
-def update_peer_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
+def update_peer_routes(interface, timeout, wg_peers, ipv4_routes, ipv6_routes):
     """Checks the activity of all wireguard peers (last handshake),
        and updates routes in the kernel based on AllowedIPs for each peer."""
     now = time.time()
     for peer in wg_peers:
         # Active peer
-        if now - peer.latest_handshake < TIMEOUT:
+        if now - peer.latest_handshake < timeout:
             for prefix in peer.allowed_ips:
                 if not (prefix in ipv4_routes or prefix in ipv6_routes):
                     logging.info("%s: [%s] Adding new prefix %s", interface,
@@ -127,10 +124,10 @@ def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
                               interface, prefix, ret.stderr.strip())
             
 
-def main_loop(interfaces):
-    logging.info("Starting main loop on interfaces: %s", ", ".join(interfaces))
+def main_loop(args):
+    logging.info("Starting main loop on interfaces: %s", ", ".join(args.interface))
     while True:
-        for interface in interfaces:
+        for interface in args.interface:
             wg_peers = get_wg_peers(interface)
             if wg_peers == None:
                 continue
@@ -138,17 +135,29 @@ def main_loop(interfaces):
             ipv6_routes = get_kernel_routes(interface, ipv6=True)
             if ipv4_routes == None or ipv6_routes == None:
                 continue
-            update_peer_routes(interface, wg_peers, ipv4_routes, ipv6_routes)
+            update_peer_routes(interface, args.timeout, wg_peers, ipv4_routes, ipv6_routes)
             remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes)
-        time.sleep(INTERVAL)
+        time.sleep(args.interval)
+
 
 if __name__ == '__main__':
-    file_logging = logging.FileHandler("/var/log/wg-autoroute.log")
-    stderr_logging = logging.StreamHandler()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("interface", help="Wireguard interface(s) to manage",
+                        nargs="+")
+    parser.add_argument("--logfile", "-l", help="Log to the given file in addition to stderr")
+    parser.add_argument("--interval", "-I", type=int, default=5,
+                        help="Amount of seconds to wait between each route check. Default: %(default)s")
+    parser.add_argument("--timeout", "-T", type=int, default=200,
+                        help="Amount of seconds after which a peer will be considered inactive (since its last handshake). Don't set this lower than about 3 minutes. Default: %(default)s")
+    args = parser.parse_args()
+    # Setup logging
+    handlers = [logging.StreamHandler()]
+    if args.logfile:
+        handlers.append(logging.FileHandler("/var/log/wg-autoroute.log"))
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                         level=logging.INFO,
-                        handlers=[stderr_logging, file_logging])
+                        handlers=handlers)
     try:
-        main_loop([sys.argv[1]])
+        main_loop(args)
     except KeyboardInterrupt:
         logging.info("Exiting main loop")
