@@ -12,7 +12,7 @@ ensure that these local routes are distributed across your network (using OSPF, 
 
 The main interesting property is that **synchronisation is dynamic:** we ensure that
 kernel routes only exist when peers are **active**, and we remove routes to inactive peers.
-Activity is detected based on the date of the latest handshake.
+Activity is detected based on the age of the latest handshake.
 
 
 ## Installation
@@ -43,7 +43,7 @@ The service will only manage routes that go through the specified interface.
 
 You can also manually start the service with one or more Wireguard interface names as argument:
 
-    sudo python3 src/wg-autoroute.py wg0
+    sudo python3 src/wg-autoroute.py wg0 [wg1 [...]]
 
 Of course, it needs to run as root to be able to add and remove kernel routes.
 
