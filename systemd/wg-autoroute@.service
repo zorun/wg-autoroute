@@ -1,0 +1,9 @@
+[Unit]
+Description=Automatically synchronise kernel routes with Wireguard on interface %I
+
+[Service]
+ExecStart=/usr/local/sbin/wg-autoroute.py %I
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -14,22 +14,38 @@ The main interesting property is that **synchronisation is dynamic:** we ensure 
 kernel routes only exist when peers are **active**, and we remove routes to inactive peers.
 Activity is detected based on the date of the latest handshake.
 
-## Installing
 
-The project is pure-Python and has no dependency.  The minimum required version of Python is 3.5.
+## Installation
+
+The project is pure-Python and has no dependency.  It means you can just
+copy the main script (`src/wg-autoroute.py`) and it will work.  The
+minimum required version of Python is 3.5.
 
 
-## Using
+## Systemd service
 
-For now, you can start it with a Wireguard interface name as argument:
+To manage the service with systemd:
+
+- copy `src/wg-autoroute.py` to `/usr/local/sbin/wg-autoroute.py`, make sure it is executable
+
+- copy `systemd/wg-autoroute@.service` to `/etc/systemd/system/wg-autoroute@.service`
+
+- enable and start the service on interface `wg0`:
+
+    systemctl daemon-reload
+    systemctl enable wg-autoroute@wg0
+    systemctl start wg-autoroute@wg0
+
+The service will only manage routes that go through the specified interface.
+
+
+## Manual usage
+
+You can also manually start the service with one or more Wireguard interface names as argument:
 
     sudo python3 src/wg-autoroute.py wg0
 
 Of course, it needs to run as root to be able to add and remove kernel routes.
-
-The software will only manage routes that go through the specified interface.
-
-TODO: systemd service
 
 
 ## Credits
