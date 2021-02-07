@@ -1,0 +1,2 @@
+# Copy to /etc/default/wg-autoroute if you want to pass arguments
+WG_AUTOROUTE_ARGS="--timeout 300"

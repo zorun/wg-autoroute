@@ -36,7 +36,16 @@ To manage the service with systemd:
     systemctl enable wg-autoroute@wg0
     systemctl start wg-autoroute@wg0
 
-The service will only manage routes that go through the specified interface.
+To pass additional options, create a file `/etc/default/wg-autoroute` and
+define `$WG_AUTOROUTE_ARGS`, for instance:
+
+    # /etc/default/wg-autoroute
+    WG_AUTOROUTE_ARGS="--timeout 300"
+
+The service will only manage routes that go through the specified
+interface. If you need to manage several wireguard interfaces, either
+start several systemd services, or use $WG_AUTOROUTE_ARGS to manually add
+several interfaces to the command-line arguments.
 
 
 ## Manual usage
