@@ -15,10 +15,14 @@ Peer = namedtuple("Peer", [
     "latest_handshake",     # Int
     "transfer_rx",          # Int
     "transfer_tx",          # Int
-    "persistent_keepalive"  # Int
+    "persistent_keepalive"  # Int, 0 means disabled
 ])
 
 def parse_wg_peer(fields):
+    try:
+        persistent_keepalive = int(fields[7])
+    except ValueError: # Probably "off", let's be robust to other cases
+        persistent_keepalive = 0
     peer = Peer(fields[0],
                 fields[1],
                 fields[2],
@@ -26,7 +30,7 @@ def parse_wg_peer(fields):
                 int(fields[4]),
                 int(fields[5]),
                 int(fields[6]),
-                int(fields[7]))
+                persistent_keepalive)
     return peer
 
 
