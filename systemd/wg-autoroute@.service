@@ -1,9 +1,9 @@
 [Unit]
-Description=Automatically synchronise kernel routes with Wireguard on interface %I
+Description=Automatically synchronise kernel routes with Wireguard on interface %i
 
 [Service]
 EnvironmentFile=-/etc/default/wg-autoroute
-ExecStart=/usr/local/sbin/wg-autoroute.py $WG_AUTOROUTE_ARGS %I
+ExecStart=/usr/local/sbin/wg-autoroute.py $WG_AUTOROUTE_ARGS %i
 Restart=always
 
 [Install]
