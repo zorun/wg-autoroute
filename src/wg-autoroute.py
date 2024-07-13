@@ -125,6 +125,8 @@ def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
         return
     addresses = [address.split()[2] for address in raw_addresses.stdout.split("\n") if address != ""]
     all_allowed_ips.update(addresses)
+    # Don't remove link local
+    all_allowed_ips.add("fe80::/64")
     # Remove unknown routes
     for prefix in ipv4_routes + ipv6_routes:
         if prefix not in all_allowed_ips:
