@@ -123,8 +123,11 @@ def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
         logging.error("%s: Couldn't get interface addresses: %s", interface,
                       raw_addresses.stderr.strip())
         return
-    addresses = [address.split()[2] for address in raw_addresses.stdout.split("\n") if address != ""]
-    all_allowed_ips.update(addresses)
+    for address in raw_addresses.stdout.split("\n") :
+        if address != "" :
+          addresses = address.split()
+          if len(addresses) > 2 :
+              all_allowed_ips.update(addresses[2:])
     # Don't remove link local
     all_allowed_ips.add("fe80::/64")
     # Remove unknown routes
