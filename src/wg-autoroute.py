@@ -115,6 +115,16 @@ def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
     all_allowed_ips = set()
     for peer in wg_peers:
         all_allowed_ips.update(peer.allowed_ips)
+    # Retrieve local addresses
+    raw_addresses = subprocess.run(["ip", "-brief", "address", "show", interface],
+                                   encoding="ascii",
+                                   capture_output=True)
+    if raw_addresses.returncode != 0:
+        logging.error("%s: Couldn't get interface addresses: %s", interface,
+                      raw_addresses.stderr.strip())
+        return
+    addresses = [address.split()[2] for address in raw_addresses.stdout.split("\n") if address != ""]
+    all_allowed_ips.update(addresses)
     # Remove unknown routes
     for prefix in ipv4_routes + ipv6_routes:
         if prefix not in all_allowed_ips:
@@ -157,7 +167,7 @@ if __name__ == '__main__':
     # Setup logging
     handlers = [logging.StreamHandler()]
     if args.logfile:
-        handlers.append(logging.FileHandler("/var/log/wg-autoroute.log"))
+        handlers.append(logging.FileHandler(args.logfile))
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                         level=logging.INFO,
                         handlers=handlers)
