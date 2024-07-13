@@ -98,6 +98,9 @@ def update_peer_routes(interface, timeout, wg_peers, ipv4_routes, ipv6_routes):
         else:
             for prefix in peer.allowed_ips:
                 if prefix in ipv4_routes or prefix in ipv6_routes:
+                    # Don't remove link local prefix
+                    if prefix == "fe80::/64":
+                        continue
                     logging.info("%s: [%s] Removing stale prefix %s", interface,
                                  peer.public_key, prefix)
                     ret = subprocess.run(["ip", "route", "delete", prefix, "dev", interface],
