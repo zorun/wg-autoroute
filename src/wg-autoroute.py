@@ -157,7 +157,7 @@ if __name__ == '__main__':
     # Setup logging
     handlers = [logging.StreamHandler()]
     if args.logfile:
-        handlers.append(logging.FileHandler("/var/log/wg-autoroute.log"))
+        handlers.append(logging.FileHandler(args.logfile))
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
                         level=logging.INFO,
                         handlers=handlers)
