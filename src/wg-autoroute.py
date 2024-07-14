@@ -65,7 +65,7 @@ def get_kernel_routes(interface, ipv6):
         logging.error("%s: Couldn't get kernel routes: %s", interface,
                       raw_routes.stderr.strip())
         return
-    routes = [route.split()[0] for route in raw_routes.stdout.split("\n") if route != ""]
+    routes = [route.split()[0] for route in raw_routes.stdout.split("\n") if route != "" and "kernel" not in route]
     # Handle "default" route
     default_route = "::/0" if ipv6 else "0.0.0.0/0"
     routes = map(lambda route: default_route if route == "default" else route,
