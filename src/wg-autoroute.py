@@ -98,6 +98,9 @@ def update_peer_routes(interface, timeout, wg_peers, ipv4_routes, ipv6_routes):
         else:
             for prefix in peer.allowed_ips:
                 if prefix in ipv4_routes or prefix in ipv6_routes:
+                    # Don't remove link local prefix
+                    if prefix == "fe80::/64":
+                        continue
                     logging.info("%s: [%s] Removing stale prefix %s", interface,
                                  peer.public_key, prefix)
                     ret = subprocess.run(["ip", "route", "delete", prefix, "dev", interface],
@@ -115,6 +118,8 @@ def remove_orphan_routes(interface, wg_peers, ipv4_routes, ipv6_routes):
     all_allowed_ips = set()
     for peer in wg_peers:
         all_allowed_ips.update(peer.allowed_ips)
+    # Don't remove link local prefix
+    all_allowed_ips.add("fe80::/64")
     # Remove unknown routes
     for prefix in ipv4_routes + ipv6_routes:
         if prefix not in all_allowed_ips:
