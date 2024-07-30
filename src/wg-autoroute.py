@@ -89,7 +89,7 @@ def update_peer_routes(interface, timeout, wg_peers, ipv4_routes, ipv6_routes):
                 if not (prefix in ipv4_routes or prefix in ipv6_routes):
                     logging.info("%s: [%s] Adding new prefix %s", interface,
                                  peer.public_key, prefix)
-                    ret = subprocess.run(["ip", "route", "replace", prefix, "dev", interface],
+                    ret = subprocess.run(["ip", "route", "replace", prefix, "dev", interface, "proto", "static"],
                                          encoding="ascii",
                                          capture_output=True)
                     if ret.returncode != 0:
